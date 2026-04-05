@@ -365,7 +365,7 @@ export default function ChatPage() {
         </div>
 
         {/* Sign Out */}
-        <div className="p-3 border-t border-slate-700/50">
+        <div className="p-3 pb-10 border-t border-slate-700/50">
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-lg transition"
