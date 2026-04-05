@@ -38,6 +38,8 @@ export default function ChatPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [expandedSource, setExpandedSource] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -54,6 +56,18 @@ export default function ChatPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+    if (showUserMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   async function fetchDocuments() {
     const res = await fetch("/api/documents");
@@ -364,16 +378,43 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Sign Out */}
-        <div className="p-3 border-t border-slate-700/50">
+        {/* User profile bar */}
+        <div className="relative border-t border-slate-700/50" ref={userMenuRef}>
+          {/* Popup menu */}
+          {showUserMenu && (
+            <div className="absolute bottom-full left-2 right-2 mb-1.5 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-50">
+              <div className="px-4 py-2 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-800 truncate">{session.user?.name}</p>
+                <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Log out
+              </button>
+            </div>
+          )}
+
+          {/* Profile button */}
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-lg transition"
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="w-full flex items-center gap-2.5 p-3 hover:bg-slate-800 transition"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center shrink-0">
+              <span className="text-white text-xs font-bold">
+                {session.user?.name?.[0]?.toUpperCase() || "U"}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="text-sm font-medium text-slate-200 truncate">{session.user?.name}</p>
+            </div>
+            <svg className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${showUserMenu ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>
-            Sign Out
           </button>
         </div>
       </div>
