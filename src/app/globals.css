@@ -80,3 +80,179 @@ body {
 .typing-dot:nth-child(1) { animation: typing-dot 1.4s ease-in-out infinite 0s; }
 .typing-dot:nth-child(2) { animation: typing-dot 1.4s ease-in-out infinite 0.2s; }
 .typing-dot:nth-child(3) { animation: typing-dot 1.4s ease-in-out infinite 0.4s; }
+
+/* Message fade-in animation */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.msg-fade-in {
+  animation: fade-in-up 0.3s ease-out;
+}
+
+/* Streaming cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #6366f1;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+
+/* ============================================
+   Code block & syntax highlighting styles
+   (highlight.js github-dark inspired theme)
+   ============================================ */
+
+/* Code block container */
+.prose pre {
+  background: #1e1e2e !important;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border: 1px solid #2e2e3e;
+  position: relative;
+}
+
+.prose pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #e4e4e7;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+}
+
+/* Inline code */
+.prose :not(pre) > code {
+  background: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.85em;
+  color: #e11d48;
+  font-weight: 500;
+}
+
+/* highlight.js token colors (github-dark inspired) */
+.hljs-comment,
+.hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #ff7b72;
+}
+
+.hljs-string,
+.hljs-addition {
+  color: #a5d6ff;
+}
+
+.hljs-number,
+.hljs-literal {
+  color: #79c0ff;
+}
+
+.hljs-built_in,
+.hljs-type {
+  color: #ffa657;
+}
+
+.hljs-function .hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: #d2a8ff;
+}
+
+.hljs-attr,
+.hljs-attribute {
+  color: #79c0ff;
+}
+
+.hljs-variable,
+.hljs-template-variable {
+  color: #ffa657;
+}
+
+.hljs-params {
+  color: #e4e4e7;
+}
+
+.hljs-regexp {
+  color: #a5d6ff;
+}
+
+.hljs-deletion {
+  color: #ffa198;
+  background: rgba(255, 129, 130, 0.1);
+}
+
+.hljs-addition {
+  background: rgba(63, 185, 80, 0.1);
+}
+
+.hljs-meta {
+  color: #79c0ff;
+}
+
+.hljs-tag {
+  color: #7ee787;
+}
+
+.hljs-name {
+  color: #7ee787;
+}
+
+/* Prose table styling */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+}
+
+.prose th {
+  background: #f8fafc;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+  font-weight: 600;
+}
+
+.prose td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+/* Code block copy button container */
+.code-block-wrapper {
+  position: relative;
+}
+
+.code-block-wrapper .code-copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.code-block-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}

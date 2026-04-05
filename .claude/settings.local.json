@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx kill-port:*)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(curl -s http://localhost:3000/api/auth/signin/google)",
+      "Bash(curl -sv http://localhost:3000/api/auth/signin/google)",
+      "Bash(node -e \"const p = require\\(''./node_modules/next-auth/package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(curl -sv -X POST http://localhost:3000/api/auth/signin/google -H \"Content-Type: application/x-www-form-urlencoded\" -d \"csrfToken=704c2fd11a3e9ac9e143ebae58faf9e93704d954bef645a7505e7e07bc963f4a\")",
+      "Bash(curl -sv -c /tmp/cookies.txt -b /tmp/cookies.txt http://localhost:3000/api/auth/signin/google)",
+      "Bash(node -e \":*)",
+      "Bash(npx next:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
