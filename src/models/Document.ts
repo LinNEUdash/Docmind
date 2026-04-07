@@ -21,6 +21,7 @@ const DocumentSchema = new Schema(
       default: "processing",
     },
     chunks: [ChunkSchema],
+    pdfPath: { type: String },
   },
   { timestamps: true }
 );

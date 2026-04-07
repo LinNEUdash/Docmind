@@ -10,15 +10,21 @@ import {
   DragEvent,
   ComponentPropsWithoutRef,
 } from "react";
+import dynamic from "next/dynamic";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+
+const PdfViewer = dynamic(() => import("@/components/PdfViewer"), {
+  ssr: false,
+});
 
 interface DocumentItem {
   _id: string;
   fileName: string;
   pageCount: number;
   status: string;
+  pdfPath?: string;
 }
 
 interface Source {
@@ -98,6 +104,11 @@ export default function ChatPage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [copiedMsgId, setCopiedMsgId] = useState<number | null>(null);
+  const [showPdfPanel, setShowPdfPanel] = useState(false);
+  const [targetPage, setTargetPage] = useState<{
+    page: number;
+    key: number;
+  } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -207,6 +218,10 @@ export default function ChatPage() {
       setSelectedDoc(docId);
       setMessages([]);
       setConversationId(null);
+      setTargetPage(null);
+      // Auto-show PDF panel if doc has a PDF file
+      const doc = documents.find((d) => d._id === docId);
+      setShowPdfPanel(!!doc?.pdfPath);
     }
   }
 
@@ -603,7 +618,7 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
+      <div className={`flex flex-col min-w-0 bg-white ${showPdfPanel && selectedDoc ? "w-[55%]" : "flex-1"}`}>
         {selectedDoc ? (
           <>
             {/* Chat Header */}
@@ -623,7 +638,7 @@ export default function ChatPage() {
                   />
                 </svg>
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <h2 className="font-semibold text-gray-800 truncate text-[15px]">
                   {selectedDocName}
                 </h2>
@@ -631,6 +646,23 @@ export default function ChatPage() {
                   Ask questions about this document
                 </p>
               </div>
+              {/* PDF toggle button */}
+              {selectedDoc && documents.find((d) => d._id === selectedDoc)?.pdfPath && (
+                <button
+                  onClick={() => setShowPdfPanel(!showPdfPanel)}
+                  className={`ml-auto px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
+                    showPdfPanel
+                      ? "bg-indigo-50 text-indigo-600"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
+                  title={showPdfPanel ? "Hide PDF" : "Show PDF"}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  {showPdfPanel ? "Hide PDF" : "View PDF"}
+                </button>
+              )}
             </div>
 
             {/* Messages */}
@@ -822,7 +854,18 @@ export default function ChatPage() {
                                       className="w-full text-left"
                                     >
                                       <div className="flex items-center gap-2 text-xs">
-                                        <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-medium">
+                                        <span
+                                          className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-medium hover:bg-indigo-100 cursor-pointer transition"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowPdfPanel(true);
+                                            setTargetPage({
+                                              page: source.pageNumber,
+                                              key: Date.now(),
+                                            });
+                                          }}
+                                          title="View in PDF"
+                                        >
                                           P.{source.pageNumber}
                                         </span>
                                         <span className="text-gray-300">
@@ -945,6 +988,18 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* PDF Preview Panel */}
+      {showPdfPanel && selectedDoc && (
+        <div className="w-[45%] shrink-0 h-full">
+          <PdfViewer
+            documentId={selectedDoc}
+            fileName={selectedDocName}
+            targetPage={targetPage}
+            onClose={() => setShowPdfPanel(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
