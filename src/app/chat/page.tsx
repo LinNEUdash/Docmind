@@ -544,9 +544,11 @@ export default function ChatPage() {
                   onClick={() => {
                     setMessages([]);
                     setConversationId(null);
+                    setExpandedSource(null);
                     setShowUserMenu(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+                  disabled={messages.length === 0}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -855,45 +857,58 @@ export default function ChatPage() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="bg-white border-t border-gray-100 px-4 py-3 shrink-0">
-              <div className="max-w-3xl mx-auto border border-gray-200 rounded-2xl bg-gray-50/50 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-400 transition-all">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  rows={1}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    autoResizeTextarea();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder="Ask a question about this document..."
-                  className="w-full px-4 pt-3 pb-1 text-sm bg-transparent text-gray-900 placeholder-gray-400 resize-none focus:outline-none"
-                  disabled={isStreaming}
-                  style={{ maxHeight: "160px", overflow: input.split("\n").length > 4 ? "auto" : "hidden" }}
-                />
-                <div className="flex items-center justify-between px-3 pb-2">
-                  <p className="text-[11px] text-gray-300">
-                    Enter send · Shift+Enter new line
-                  </p>
-                  <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isStreaming}
-                    className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center hover:bg-indigo-700 transition-all disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isStreaming ? (
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+            {/* Input Area - Claude style */}
+            <div className="px-6 pb-4 pt-2 shrink-0">
+              <div className="max-w-3xl mx-auto">
+                <div className="border border-gray-200 rounded-2xl bg-white shadow-sm focus-within:shadow-md focus-within:border-gray-300 transition-all">
+                  {/* Textarea */}
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    rows={1}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      autoResizeTextarea();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    placeholder="Ask a question about this document..."
+                    className="w-full px-5 pt-4 pb-2 text-[15px] bg-transparent text-gray-900 placeholder-gray-400 resize-none focus:outline-none leading-relaxed"
+                    disabled={isStreaming}
+                    style={{ minHeight: "52px", maxHeight: "160px", overflow: input.split("\n").length > 4 ? "auto" : "hidden" }}
+                  />
+                  {/* Bottom toolbar */}
+                  <div className="flex items-center justify-between px-3 pb-3">
+                    {/* Left: upload button */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition disabled:opacity-50"
+                      title="Upload PDF"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
                       </svg>
-                    )}
-                  </button>
+                    </button>
+                    {/* Right: send button */}
+                    <button
+                      onClick={handleSend}
+                      disabled={!input.trim() || isStreaming}
+                      className="w-9 h-9 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-all disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {isStreaming ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
