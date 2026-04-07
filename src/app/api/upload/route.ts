@@ -3,6 +3,8 @@ import { getToken } from "next-auth/jwt";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from "fs";
+import path from "path";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -89,7 +91,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Save PDF to disk for viewer
+    const pdfDir = path.join(process.cwd(), "uploads", "pdfs", token.email!);
+    fs.mkdirSync(pdfDir, { recursive: true });
+    const pdfFilePath = path.join(pdfDir, `${doc._id}.pdf`);
+    fs.writeFileSync(pdfFilePath, buffer);
+
     doc.chunks = chunksWithEmbeddings;
+    doc.pdfPath = `uploads/pdfs/${token.email}/${doc._id}.pdf`;
     doc.status = "ready";
     await doc.save();
 
