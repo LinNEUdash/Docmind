@@ -24,10 +24,28 @@ export default function PdfViewer({
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1.0);
   const [loading, setLoading] = useState(true);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const pdfUrl = `/api/documents/${documentId}/pdf`;
+
+  // Track container width for fit-to-width rendering
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    setContainerWidth(el.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+
+  // Compute page width: container width minus padding, scaled
+  const pageWidth = containerWidth > 0 ? (containerWidth - 32) * scale : undefined;
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -187,11 +205,11 @@ export default function PdfViewer({
               >
                 <Page
                   pageNumber={i + 1}
-                  scale={scale}
+                  width={pageWidth}
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
                   loading={
-                    <div className="w-[595px] h-[842px] bg-white flex items-center justify-center" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
+                    <div className="bg-white flex items-center justify-center" style={{ width: pageWidth || 595, height: (pageWidth || 595) * 1.414 }}>
                       <div className="w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
                     </div>
                   }
