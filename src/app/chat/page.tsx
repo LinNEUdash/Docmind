@@ -976,40 +976,46 @@ export default function ChatPage() {
           </>
         ) : (
           /* No document selected */
-          <div className="flex-1 flex items-center justify-center bg-white">
-            <div className="text-center max-w-sm">
-              {/* Illustration */}
-              <div className="relative mx-auto mb-6 w-24 h-24">
-                <div className="absolute inset-0 bg-indigo-50 rounded-2xl rotate-6" />
-                <div className="absolute inset-0 bg-indigo-100/50 rounded-2xl -rotate-3" />
-                <div className="relative w-full h-full bg-white rounded-2xl border border-gray-100 flex items-center justify-center shadow-sm">
-                  <svg className="w-10 h-10 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+            <div className="text-center max-w-md px-6">
+              {/* Large illustration */}
+              <div className="relative mx-auto mb-8 w-32 h-32">
+                <div className="absolute inset-0 bg-indigo-100/60 rounded-3xl rotate-6" />
+                <div className="absolute inset-0 bg-indigo-50 rounded-3xl -rotate-3" />
+                <div className="relative w-full h-full bg-white rounded-3xl border border-gray-100 flex items-center justify-center shadow-lg">
+                  <svg className="w-14 h-14 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
               </div>
 
-              <h3 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-2xl font-bold text-gray-800">
                 Welcome to DocMind
-              </h3>
-              <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+              </h2>
+              <p className="text-base text-gray-500 mt-3 leading-relaxed">
                 Select a document from the sidebar to start asking questions, or upload a new PDF.
               </p>
 
-              {/* Visual hints */}
-              <div className="mt-6 flex items-center justify-center gap-6 text-xs text-gray-300">
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                  </svg>
-                  <span>Pick from sidebar</span>
+              {/* Action hints */}
+              <div className="mt-8 flex items-center justify-center gap-8">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-gray-500 font-medium">Pick from sidebar</span>
                 </div>
-                <div className="w-px h-4 bg-gray-200" />
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span>Drag & drop PDF</span>
+
+                <div className="text-gray-200 text-lg font-light">or</div>
+
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-gray-500 font-medium">Drag & drop PDF</span>
                 </div>
               </div>
             </div>
