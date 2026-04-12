@@ -2,38 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getEmbedding, smartSplitText } from "@/lib/rag";
+import { parseDocument, isSupportedFile, getSupportedExtensions } from "@/lib/parsers";
 import fs from "fs";
 import path from "path";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-function splitText(text: string, chunkSize = 1000, overlap = 200): string[] {
-  const chunks: string[] = [];
-  let start = 0;
-  while (start < text.length) {
-    const end = Math.min(start + chunkSize, text.length);
-    chunks.push(text.slice(start, end));
-    start += chunkSize - overlap;
-  }
-  return chunks;
-}
-
-async function getEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
-  const result = await model.embedContent(text);
-  return result.embedding.values;
-}
-
-async function parsePDF(
-  buffer: Buffer
-): Promise<{ text: string; numpages: number }> {
-  const { createRequire } = await import("module");
-  const require = createRequire(import.meta.url);
-  const pdfParse = require("pdf-parse");
-  const data = await pdfParse(buffer);
-  return { text: data.text, numpages: data.numpages };
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,19 +24,19 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
-    if (!file.name.endsWith(".pdf")) {
+    if (!isSupportedFile(file.name)) {
       return NextResponse.json(
-        { error: "Only PDF files are supported" },
+        { error: `Unsupported file type. Supported: ${getSupportedExtensions().join(", ")}` },
         { status: 400 }
       );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const pdfData = await parsePDF(buffer);
+    const parsed = await parseDocument(buffer, file.name);
 
-    if (!pdfData.text.trim()) {
+    if (!parsed.text.trim()) {
       return NextResponse.json(
-        { error: "Could not extract text from PDF" },
+        { error: "Could not extract text from file" },
         { status: 400 }
       );
     }
@@ -73,12 +45,12 @@ export async function POST(request: NextRequest) {
       userId: token.email,
       fileName: file.name,
       fileSize: file.size,
-      pageCount: pdfData.numpages,
+      pageCount: parsed.pageCount,
       status: "processing",
       chunks: [],
     });
 
-    const textChunks = splitText(pdfData.text);
+    const textChunks = smartSplitText(parsed.text);
     const chunksWithEmbeddings = [];
 
     for (let i = 0; i < textChunks.length; i++) {
@@ -86,19 +58,20 @@ export async function POST(request: NextRequest) {
       chunksWithEmbeddings.push({
         text: textChunks[i],
         pageNumber:
-          Math.floor((i / textChunks.length) * pdfData.numpages) + 1,
+          Math.floor((i / textChunks.length) * parsed.pageCount) + 1,
         embedding,
       });
     }
 
-    // Save PDF to disk for viewer
-    const pdfDir = path.join(process.cwd(), "uploads", "pdfs", token.email!);
-    fs.mkdirSync(pdfDir, { recursive: true });
-    const pdfFilePath = path.join(pdfDir, `${doc._id}.pdf`);
-    fs.writeFileSync(pdfFilePath, buffer);
+    // Save original file to disk for viewer
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const fileDir = path.join(process.cwd(), "uploads", "files", token.email!);
+    fs.mkdirSync(fileDir, { recursive: true });
+    const filePath = path.join(fileDir, `${doc._id}${ext}`);
+    fs.writeFileSync(filePath, buffer);
 
     doc.chunks = chunksWithEmbeddings;
-    doc.pdfPath = `uploads/pdfs/${token.email}/${doc._id}.pdf`;
+    doc.pdfPath = `uploads/files/${token.email}/${doc._id}${ext}`;
     doc.status = "ready";
     await doc.save();
 

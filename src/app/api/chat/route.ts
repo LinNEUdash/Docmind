@@ -4,40 +4,9 @@ import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 import { Conversation } from "@/models/Conversation";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getEmbedding, hybridSearch, rerankChunks } from "@/lib/rag";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-async function getEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
-  const result = await model.embedContent(text);
-  return result.embedding.values;
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-function findRelevantChunks(
-  queryEmbedding: number[],
-  chunks: { text: string; pageNumber: number; embedding: number[] }[],
-  topK = 5
-) {
-  const scored = chunks.map((chunk) => ({
-    text: chunk.text,
-    pageNumber: chunk.pageNumber,
-    score: cosineSimilarity(queryEmbedding, chunk.embedding),
-  }));
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, topK);
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,9 +59,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Vector search: embed query and find relevant chunks
+    // Hybrid Search: BM25 + Vector with RRF fusion
     const queryEmbedding = await getEmbedding(message);
-    const relevantChunks = findRelevantChunks(queryEmbedding, doc.chunks);
+    const hybridResults = hybridSearch(queryEmbedding, message, doc.chunks, 10);
+
+    // Rerank with LLM for higher precision
+    const relevantChunks = await rerankChunks(message, hybridResults, 5);
 
     const context = relevantChunks
       .map(
