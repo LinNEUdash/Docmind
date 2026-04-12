@@ -25,6 +25,12 @@ interface DocumentItem {
   pageCount: number;
   status: string;
   pdfPath?: string;
+  createdAt?: string;
+}
+
+interface Toast {
+  type: "success" | "error";
+  message: string;
 }
 
 interface Source {
@@ -93,6 +99,7 @@ export default function ChatPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [docsLoading, setDocsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -104,6 +111,7 @@ export default function ChatPage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [copiedMsgId, setCopiedMsgId] = useState<number | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [showPdfPanel, setShowPdfPanel] = useState(false);
   const [targetPage, setTargetPage] = useState<{
     page: number;
@@ -125,6 +133,32 @@ export default function ChatPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  function showToast(type: "success" | "error", message: string) {
+    setToast({ type, message });
+  }
+
+  function formatDate(dateStr?: string) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "Just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 7) return `${diffDay}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -155,11 +189,12 @@ export default function ChatPage() {
       const data = await res.json();
       setDocuments(data);
     }
+    setDocsLoading(false);
   }
 
   async function uploadFile(file: File) {
     if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
-      alert("Please select a PDF file");
+      showToast("error", "Please select a PDF file");
       return;
     }
     setUploading(true);
@@ -173,12 +208,13 @@ export default function ChatPage() {
       });
       if (res.ok) {
         await fetchDocuments();
+        showToast("success", "PDF uploaded successfully");
       } else {
         const error = await res.json();
-        alert("Upload failed: " + error.error);
+        showToast("error", "Upload failed: " + error.error);
       }
     } catch {
-      alert("Upload failed");
+      showToast("error", "Upload failed");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -391,6 +427,35 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 msg-fade-in">
+          <div
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white"
+                : "bg-red-600 text-white"
+            }`}
+          >
+            {toast.type === "success" ? (
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            {toast.message}
+            <button onClick={() => setToast(null)} className="ml-1 opacity-70 hover:opacity-100">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar - Dark theme */}
       <div className="w-72 bg-slate-900 flex flex-col shrink-0">
         {/* Sidebar Header */}
@@ -469,7 +534,20 @@ export default function ChatPage() {
           </p>
         </div>
         <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5 sidebar-scroll">
-          {visibleDocuments.length === 0 ? (
+          {docsLoading ? (
+            /* Skeleton loading */
+            <div className="space-y-1 px-1">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-2.5 px-3 py-2.5 animate-pulse">
+                  <div className="w-8 h-8 bg-slate-800 rounded-lg" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-slate-800 rounded w-3/4" />
+                    <div className="h-2 bg-slate-800/60 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : visibleDocuments.length === 0 ? (
             <div className="text-center mt-8 px-4">
               <svg
                 className="w-10 h-10 mx-auto text-slate-700 mb-2"
@@ -529,6 +607,9 @@ export default function ChatPage() {
                     className={`text-xs mt-0.5 ${selectedDoc === doc._id ? "text-indigo-300/70" : "text-slate-600"}`}
                   >
                     {doc.pageCount} pages
+                    {doc.createdAt && (
+                      <span className="ml-1">&middot; {formatDate(doc.createdAt)}</span>
+                    )}
                     {doc.status !== "ready" && (
                       <span className="ml-1 text-amber-400/80">
                         ({doc.status})
