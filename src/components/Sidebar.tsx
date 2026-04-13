@@ -27,6 +27,7 @@ interface SidebarProps {
   uploading: boolean;
   selectedDoc: string | null;
   onSelectDoc: (docId: string) => void;
+  onDeleteDoc: (docId: string) => void;
   onUploadClick: () => void;
   onClearConversation: () => void;
   hasMessages: boolean;
@@ -40,11 +41,13 @@ export default function Sidebar({
   uploading,
   selectedDoc,
   onSelectDoc,
+  onDeleteDoc,
   onUploadClick,
   onClearConversation,
   hasMessages,
 }: SidebarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,47 +137,86 @@ export default function Sidebar({
           </div>
         ) : (
           documents.map((doc) => (
-            <button
-              key={doc._id}
-              onClick={() => onSelectDoc(doc._id)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-start gap-2.5 group ${
-                selectedDoc === doc._id
-                  ? "bg-indigo-500/20 text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+            <div key={doc._id} className="relative group">
+              {/* Delete confirmation overlay */}
+              {confirmDeleteId === doc._id && (
+                <div className="absolute inset-0 z-10 bg-slate-800/95 rounded-lg flex items-center justify-center gap-2 px-2">
+                  <span className="text-xs text-slate-300">Delete?</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteDoc(doc._id);
+                      setConfirmDeleteId(null);
+                    }}
+                    className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-md transition"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDeleteId(null);
+                    }}
+                    className="px-2.5 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded-md transition"
+                  >
+                    No
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={() => onSelectDoc(doc._id)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-start gap-2.5 ${
                   selectedDoc === doc._id
-                    ? "bg-indigo-500/30"
-                    : "bg-slate-800 group-hover:bg-slate-700"
+                    ? "bg-indigo-500/20 text-white"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 }`}
               >
-                <svg
-                  className={`w-4 h-4 ${selectedDoc === doc._id ? "text-indigo-400" : "text-slate-500"}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                    selectedDoc === doc._id
+                      ? "bg-indigo-500/30"
+                      : "bg-slate-800 group-hover:bg-slate-700"
+                  }`}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  <svg
+                    className={`w-4 h-4 ${selectedDoc === doc._id ? "text-indigo-400" : "text-slate-500"}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate text-[13px]">{doc.fileName}</p>
+                  <p className={`text-xs mt-0.5 ${selectedDoc === doc._id ? "text-indigo-300/70" : "text-slate-600"}`}>
+                    {doc.pageCount} pages
+                    {doc.createdAt && (
+                      <span className="ml-1">&middot; {formatDate(doc.createdAt)}</span>
+                    )}
+                    {doc.status !== "ready" && (
+                      <span className="ml-1 text-amber-400/80">({doc.status})</span>
+                    )}
+                  </p>
+                </div>
+                {selectedDoc === doc._id && (
+                  <div className="w-1 h-8 bg-indigo-400 rounded-full shrink-0 mt-0.5" />
+                )}
+              </button>
+              {/* Delete button - visible on hover */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDeleteId(doc._id);
+                }}
+                className="absolute top-2 right-2 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all"
+                title="Delete document"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium truncate text-[13px]">{doc.fileName}</p>
-                <p className={`text-xs mt-0.5 ${selectedDoc === doc._id ? "text-indigo-300/70" : "text-slate-600"}`}>
-                  {doc.pageCount} pages
-                  {doc.createdAt && (
-                    <span className="ml-1">&middot; {formatDate(doc.createdAt)}</span>
-                  )}
-                  {doc.status !== "ready" && (
-                    <span className="ml-1 text-amber-400/80">({doc.status})</span>
-                  )}
-                </p>
-              </div>
-              {selectedDoc === doc._id && (
-                <div className="w-1 h-8 bg-indigo-400 rounded-full shrink-0 mt-0.5" />
-              )}
-            </button>
+              </button>
+            </div>
           ))
         )}
       </div>

@@ -22,6 +22,8 @@ const DocumentSchema = new Schema(
     },
     chunks: [ChunkSchema],
     pdfPath: { type: String },
+    fileBuffer: { type: Buffer },
+    fileMimeType: { type: String },
   },
   { timestamps: true }
 );

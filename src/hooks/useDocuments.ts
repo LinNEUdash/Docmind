@@ -80,6 +80,33 @@ export function useDocuments(sessionReady: boolean) {
     return true;
   });
 
+  const deleteDocument = useCallback(
+    async (
+      docId: string,
+      onSuccess?: () => void,
+      onError?: (msg: string) => void
+    ) => {
+      try {
+        const res = await fetch(`/api/documents/${docId}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          if (selectedDoc === docId) {
+            setSelectedDoc(null);
+          }
+          await fetchDocuments();
+          onSuccess?.();
+        } else {
+          const error = await res.json();
+          onError?.("Delete failed: " + error.error);
+        }
+      } catch {
+        onError?.("Delete failed");
+      }
+    },
+    [selectedDoc, fetchDocuments]
+  );
+
   return {
     documents,
     visibleDocuments,
@@ -89,6 +116,7 @@ export function useDocuments(sessionReady: boolean) {
     setSelectedDoc,
     fileInputRef,
     uploadFile,
+    deleteDocument,
     fetchDocuments,
   };
 }
