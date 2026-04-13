@@ -25,6 +25,20 @@ export async function getEmbedding(text: string): Promise<number[]> {
   return result.embedding.values;
 }
 
+/** Batch embed multiple texts concurrently (up to batchSize at a time) */
+export async function getEmbeddings(
+  texts: string[],
+  batchSize = 5
+): Promise<number[][]> {
+  const results: number[][] = [];
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const embeddings = await Promise.all(batch.map((t) => getEmbedding(t)));
+    results.push(...embeddings);
+  }
+  return results;
+}
+
 // --- Text Splitting ---
 
 /** Basic fixed-size chunking with overlap */

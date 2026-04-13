@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
-import { getEmbedding, smartSplitText } from "@/lib/rag";
+import { getEmbeddings, smartSplitText } from "@/lib/rag";
 import { parseDocument, isSupportedFile, getSupportedExtensions, getMimeType } from "@/lib/parsers";
 
-export async function POST(request: NextRequest) {
+// Vercel serverless: allow up to 60s for large file processing
+export const maxDuration = 60;
+
+export const POST = auth(async function POST(request) {
   try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET!,
-    });
-    if (!token?.email) {
+    const session = request.auth;
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const mimeType = getMimeType(file.name) || "application/octet-stream";
 
     const doc = await Document.create({
-      userId: token.email,
+      userId: session.user.email,
       fileName: file.name,
       fileSize: file.size,
       pageCount: parsed.pageCount,
@@ -53,17 +53,13 @@ export async function POST(request: NextRequest) {
     });
 
     const textChunks = smartSplitText(parsed.text);
-    const chunksWithEmbeddings = [];
+    const embeddings = await getEmbeddings(textChunks);
 
-    for (let i = 0; i < textChunks.length; i++) {
-      const embedding = await getEmbedding(textChunks[i]);
-      chunksWithEmbeddings.push({
-        text: textChunks[i],
-        pageNumber:
-          Math.floor((i / textChunks.length) * parsed.pageCount) + 1,
-        embedding,
-      });
-    }
+    const chunksWithEmbeddings = textChunks.map((text, i) => ({
+      text,
+      pageNumber: Math.floor((i / textChunks.length) * parsed.pageCount) + 1,
+      embedding: embeddings[i],
+    }));
 
     doc.chunks = chunksWithEmbeddings;
     doc.pdfPath = "mongodb"; // Flag indicating file stored in DB
@@ -83,4 +79,4 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error.message : "Upload failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

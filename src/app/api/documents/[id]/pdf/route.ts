@@ -1,18 +1,14 @@
-import { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 
-export async function GET(
-  request: NextRequest,
+export const GET = auth(async function GET(
+  request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET!,
-    });
-    if (!token?.email) {
+    const session = request.auth;
+    if (!session?.user?.email) {
       return new Response("Unauthorized", { status: 401 });
     }
 
@@ -21,7 +17,7 @@ export async function GET(
     const { id } = await params;
     const doc = await Document.findOne({
       _id: id,
-      userId: token.email,
+      userId: session.user.email,
     }).select("fileBuffer fileMimeType pdfPath");
 
     if (!doc) {
@@ -61,4 +57,4 @@ export async function GET(
   } catch {
     return new Response("Internal error", { status: 500 });
   }
-}
+});
