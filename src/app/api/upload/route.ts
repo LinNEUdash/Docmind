@@ -3,9 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 import { getEmbedding, smartSplitText } from "@/lib/rag";
-import { parseDocument, isSupportedFile, getSupportedExtensions } from "@/lib/parsers";
-import fs from "fs";
-import path from "path";
+import { parseDocument, isSupportedFile, getSupportedExtensions, getMimeType } from "@/lib/parsers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +39,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const mimeType = getMimeType(file.name) || "application/octet-stream";
+
     const doc = await Document.create({
       userId: token.email,
       fileName: file.name,
@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
       pageCount: parsed.pageCount,
       status: "processing",
       chunks: [],
+      fileBuffer: buffer,
+      fileMimeType: mimeType,
     });
 
     const textChunks = smartSplitText(parsed.text);
@@ -63,15 +65,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Save original file to disk for viewer
-    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-    const fileDir = path.join(process.cwd(), "uploads", "files", token.email!);
-    fs.mkdirSync(fileDir, { recursive: true });
-    const filePath = path.join(fileDir, `${doc._id}${ext}`);
-    fs.writeFileSync(filePath, buffer);
-
     doc.chunks = chunksWithEmbeddings;
-    doc.pdfPath = `uploads/files/${token.email}/${doc._id}${ext}`;
+    doc.pdfPath = "mongodb"; // Flag indicating file stored in DB
     doc.status = "ready";
     await doc.save();
 

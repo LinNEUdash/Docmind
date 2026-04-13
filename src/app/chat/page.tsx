@@ -30,6 +30,7 @@ export default function ChatPage() {
     setSelectedDoc,
     fileInputRef,
     uploadFile,
+    deleteDocument,
   } = useDocuments(!!session);
 
   const {
@@ -111,6 +112,21 @@ export default function ChatPage() {
   function handlePageClick(page: number) {
     setShowPdfPanel(true);
     setTargetPage({ page, key: Date.now() });
+  }
+
+  function handleDeleteDoc(docId: string) {
+    deleteDocument(
+      docId,
+      () => {
+        showToast("success", "Document deleted");
+        if (docId === selectedDoc) {
+          resetChat();
+          setShowPdfPanel(false);
+          setTargetPage(null);
+        }
+      },
+      (msg) => showToast("error", msg)
+    );
   }
 
   function handleClearConversation() {
@@ -201,6 +217,7 @@ export default function ChatPage() {
         uploading={uploading}
         selectedDoc={selectedDoc}
         onSelectDoc={handleSelectDoc}
+        onDeleteDoc={handleDeleteDoc}
         onUploadClick={() => fileInputRef.current?.click()}
         onClearConversation={handleClearConversation}
         hasMessages={messages.length > 0}
