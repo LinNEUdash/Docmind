@@ -1,22 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 
-export async function GET(request: NextRequest) {
+export const GET = auth(async function GET(request) {
   try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET!,
-    });
-    if (!token?.email) {
+    const session = request.auth;
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
 
     const documents = await Document.find(
-      { userId: token.email },
+      { userId: session.user.email },
       { chunks: 0 }
     ).sort({ createdAt: -1 });
 
@@ -26,4 +23,4 @@ export async function GET(request: NextRequest) {
       error instanceof Error ? error.message : "Failed to fetch documents";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

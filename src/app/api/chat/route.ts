@@ -1,5 +1,4 @@
-import { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 import { Conversation } from "@/models/Conversation";
@@ -8,13 +7,13 @@ import { getEmbedding, hybridSearch, rerankChunks } from "@/lib/rag";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function POST(request: NextRequest) {
+// Vercel serverless: allow up to 60s for RAG + LLM generation
+export const maxDuration = 60;
+
+export const POST = auth(async function POST(request) {
   try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET!,
-    });
-    if (!token?.email) {
+    const session = request.auth;
+    if (!session?.user?.email) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const doc = await Document.findOne({
       _id: documentId,
-      userId: token.email,
+      userId: session.user.email,
     });
     if (!doc || doc.status !== "ready") {
       return new Response(
@@ -47,13 +46,13 @@ export async function POST(request: NextRequest) {
     if (conversationId) {
       conversation = await Conversation.findOne({
         _id: conversationId,
-        userId: token.email,
+        userId: session.user.email,
         documentId,
       });
     }
     if (!conversation) {
       conversation = await Conversation.create({
-        userId: token.email,
+        userId: session.user.email,
         documentId,
         messages: [],
       });
@@ -176,4 +175,4 @@ Provide a clear, accurate answer based on the document excerpts above. Cite page
       headers: { "Content-Type": "application/json" },
     });
   }
-}
+});
