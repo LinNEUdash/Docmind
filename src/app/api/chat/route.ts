@@ -81,7 +81,9 @@ export const POST = auth(async function POST(request) {
       )
       .join("\n");
 
-    const systemPrompt = `You are DocMind, an AI document assistant. Answer questions based ONLY on the provided document context. If the context doesn't contain enough information to answer, say so clearly. Always cite which source/page your answer comes from using [Page X] format.
+    const systemPrompt = `You are DocMind, an AI document assistant. Answer questions based ONLY on the provided document context. If the context doesn't contain enough information to answer, say so clearly.
+
+IMPORTANT: Each source below has a page number in its header (e.g. "[Source 1, Page 1]"). When citing, you MUST use ONLY the exact page numbers shown in the source headers. Do NOT infer or invent page numbers. Use the format [Page X] to cite.
 
 Document: "${doc.fileName}"
 
@@ -91,7 +93,7 @@ ${context}
 ${historyText ? `Previous conversation:\n${historyText}\n` : ""}
 User question: ${message}
 
-Provide a clear, accurate answer based on the document excerpts above. Cite page numbers.`;
+Provide a clear, accurate answer based on the document excerpts above. Cite using ONLY the page numbers from the source headers above.`;
 
     // Save user message
     conversation.messages.push({ role: "user", content: message });
