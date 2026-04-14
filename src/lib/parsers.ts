@@ -42,16 +42,14 @@ export async function parseDocx(buffer: Buffer): Promise<ParseResult> {
   const mammoth = await import("mammoth");
   const result = await mammoth.extractRawText({ buffer });
   const text = result.value;
-  // Estimate page count: ~3000 characters per page
-  const pageCount = Math.max(1, Math.ceil(text.length / 3000));
-  return { text, pageCount };
+  // DOCX has no reliable page count, use 1 so chunk page numbers stay accurate
+  return { text, pageCount: 1 };
 }
 
 export async function parseTxt(buffer: Buffer): Promise<ParseResult> {
   const text = buffer.toString("utf-8");
-  // Estimate page count: ~3000 characters per page
-  const pageCount = Math.max(1, Math.ceil(text.length / 3000));
-  return { text, pageCount };
+  // TXT has no page concept, use 1 so chunk page numbers stay accurate
+  return { text, pageCount: 1 };
 }
 
 export async function parseDocument(
