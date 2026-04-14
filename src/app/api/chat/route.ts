@@ -119,7 +119,7 @@ export const POST = auth(async function POST(request) {
       .join("\n");
 
     const citationInstruction = isSinglePage
-      ? "Cite your sources using [Source X] format. Do NOT mention or invent any page numbers."
+      ? "Do NOT include any citations, source references, or page numbers in your response. Just answer naturally."
       : "Cite your sources using [Page X] format. ONLY use the exact page numbers shown in the source headers. Do NOT infer or invent page numbers.";
 
     const systemPrompt = `You are DocMind, an AI document assistant. Answer questions based ONLY on the provided document context. If the context doesn't contain enough information to answer, say so clearly.
