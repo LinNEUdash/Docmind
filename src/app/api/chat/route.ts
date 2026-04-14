@@ -65,10 +65,15 @@ export const POST = auth(async function POST(request) {
     // Rerank with LLM for higher precision
     const relevantChunks = await rerankChunks(message, hybridResults, 5);
 
+    // Check if document is single-page (no meaningful page distinctions)
+    const isSinglePage = doc.pageCount <= 1;
+
     const context = relevantChunks
       .map(
         (c, i) =>
-          `[Source ${i + 1}, Page ${c.pageNumber}]\n${c.text}`
+          isSinglePage
+            ? `[Source ${i + 1}]\n${c.text}`
+            : `[Source ${i + 1}, Page ${c.pageNumber}]\n${c.text}`
       )
       .join("\n\n");
 
@@ -81,9 +86,13 @@ export const POST = auth(async function POST(request) {
       )
       .join("\n");
 
+    const citationInstruction = isSinglePage
+      ? "Cite your sources using [Source X] format. Do NOT mention or invent any page numbers."
+      : "Cite your sources using [Page X] format. ONLY use the exact page numbers shown in the source headers. Do NOT infer or invent page numbers.";
+
     const systemPrompt = `You are DocMind, an AI document assistant. Answer questions based ONLY on the provided document context. If the context doesn't contain enough information to answer, say so clearly.
 
-IMPORTANT: Each source below has a page number in its header (e.g. "[Source 1, Page 1]"). When citing, you MUST use ONLY the exact page numbers shown in the source headers. Do NOT infer or invent page numbers. Use the format [Page X] to cite.
+${citationInstruction}
 
 Document: "${doc.fileName}"
 
@@ -93,7 +102,7 @@ ${context}
 ${historyText ? `Previous conversation:\n${historyText}\n` : ""}
 User question: ${message}
 
-Provide a clear, accurate answer based on the document excerpts above. Cite using ONLY the page numbers from the source headers above.`;
+Provide a clear, accurate answer based on the document excerpts above. ${citationInstruction}`;
 
     // Save user message
     conversation.messages.push({ role: "user", content: message });
