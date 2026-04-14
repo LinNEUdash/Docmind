@@ -14,6 +14,9 @@ import EmptyState from "@/components/EmptyState";
 const PdfViewer = dynamic(() => import("@/components/PdfViewer"), {
   ssr: false,
 });
+const TextViewer = dynamic(() => import("@/components/TextViewer"), {
+  ssr: false,
+});
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -111,7 +114,9 @@ export default function ChatPage() {
 
   function handlePageClick(page: number) {
     setShowPdfPanel(true);
-    setTargetPage({ page, key: Date.now() });
+    if (isPdf) {
+      setTargetPage({ page, key: Date.now() });
+    }
   }
 
   function handleDeleteDoc(docId: string) {
@@ -136,6 +141,8 @@ export default function ChatPage() {
 
   const selectedDocObj = documents.find((d) => d._id === selectedDoc);
   const selectedDocName = selectedDocObj?.fileName;
+  const isPdf = selectedDocObj?.fileMimeType === "application/pdf" ||
+    selectedDocObj?.fileName?.toLowerCase().endsWith(".pdf");
 
   if (status === "loading") {
     return (
@@ -246,12 +253,12 @@ export default function ChatPage() {
                       ? "bg-indigo-50 text-indigo-600"
                       : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                   }`}
-                  title={showPdfPanel ? "Hide PDF" : "Show PDF"}
+                  title={showPdfPanel ? "Hide Preview" : "Show Preview"}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  {showPdfPanel ? "Hide PDF" : "View PDF"}
+                  {showPdfPanel ? "Hide Preview" : isPdf ? "View PDF" : "View Text"}
                 </button>
               )}
             </div>
@@ -372,15 +379,23 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* PDF Preview Panel */}
+      {/* Document Preview Panel */}
       {showPdfPanel && selectedDoc && (
         <div className="w-[45%] shrink-0 h-full">
-          <PdfViewer
-            documentId={selectedDoc}
-            fileName={selectedDocName}
-            targetPage={targetPage}
-            onClose={() => setShowPdfPanel(false)}
-          />
+          {isPdf ? (
+            <PdfViewer
+              documentId={selectedDoc}
+              fileName={selectedDocName}
+              targetPage={targetPage}
+              onClose={() => setShowPdfPanel(false)}
+            />
+          ) : (
+            <TextViewer
+              documentId={selectedDoc}
+              fileName={selectedDocName}
+              onClose={() => setShowPdfPanel(false)}
+            />
+          )}
         </div>
       )}
     </div>

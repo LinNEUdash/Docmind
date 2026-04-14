@@ -6,6 +6,7 @@ export interface DocumentItem {
   pageCount: number;
   status: string;
   pdfPath?: string;
+  fileMimeType?: string;
   createdAt?: string;
 }
 
