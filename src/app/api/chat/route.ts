@@ -3,7 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Document } from "@/models/Document";
 import { Conversation } from "@/models/Conversation";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getEmbedding, hybridSearch, rerankChunks } from "@/lib/rag";
+import { getEmbedding, hybridSearch } from "@/lib/rag";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -87,17 +87,15 @@ export const POST = auth(async function POST(request) {
     } catch (embErr) {
       if (isRateLimitError(embErr)) {
         const delay = getRetryDelay(embErr);
-        await sleep(Math.min(delay, 15) * 1000);
+        await sleep(Math.min(delay, 45) * 1000);
         queryEmbedding = await getEmbedding(message);
       } else {
         throw embErr;
       }
     }
 
-    const hybridResults = hybridSearch(queryEmbedding, message, doc.chunks, 10);
-
-    // Rerank with LLM for higher precision (has its own fallback)
-    const relevantChunks = await rerankChunks(message, hybridResults, 5);
+    // Hybrid search already combines BM25 + vector with RRF fusion
+    const relevantChunks = hybridSearch(queryEmbedding, message, doc.chunks, 5);
 
     // Check if document is single-page (no meaningful page distinctions)
     const isSinglePage = doc.pageCount <= 1;
@@ -151,7 +149,7 @@ Provide a clear, accurate answer based on the document excerpts above. ${citatio
     } catch (genErr) {
       if (isRateLimitError(genErr)) {
         const delay = getRetryDelay(genErr);
-        await sleep(Math.min(delay, 15) * 1000);
+        await sleep(Math.min(delay, 45) * 1000);
         result = await model.generateContentStream(systemPrompt);
       } else {
         throw genErr;
