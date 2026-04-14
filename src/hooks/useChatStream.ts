@@ -17,6 +17,7 @@ export function useChatStream(selectedDoc: string | null) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -28,6 +29,31 @@ export function useChatStream(selectedDoc: string | null) {
   const resetChat = useCallback(() => {
     setMessages([]);
     setConversationId(null);
+  }, []);
+
+  // Load existing conversation from the server
+  const loadConversation = useCallback(async (documentId: string) => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`/api/documents/${documentId}/conversation`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversationId && data.messages.length > 0) {
+          setConversationId(data.conversationId);
+          setMessages(
+            data.messages.map((m: { role: string; content: string; sources?: Source[] }) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+              sources: m.sources,
+            }))
+          );
+        }
+      }
+    } catch {
+      // Silently fail — user just won't see history
+    } finally {
+      setHistoryLoading(false);
+    }
   }, []);
 
   const doStreamChat = useCallback(
@@ -143,6 +169,8 @@ export function useChatStream(selectedDoc: string | null) {
     setConversationId,
     chatEndRef,
     resetChat,
+    loadConversation,
+    historyLoading,
     handleQuickSend,
     handleSend,
   };
