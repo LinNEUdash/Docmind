@@ -45,6 +45,8 @@ export default function ChatPage() {
     setConversationId,
     chatEndRef,
     resetChat,
+    loadConversation,
+    historyLoading,
     handleQuickSend,
     handleSend,
   } = useChatStream(selectedDoc);
@@ -72,6 +74,7 @@ export default function ChatPage() {
     if (docId !== selectedDoc) {
       setSelectedDoc(docId);
       resetChat();
+      loadConversation(docId);
       setTargetPage(null);
       const doc = documents.find((d) => d._id === docId);
       setShowPdfPanel(!!doc?.pdfPath);
