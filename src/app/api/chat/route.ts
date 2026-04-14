@@ -7,8 +7,30 @@ import { getEmbedding, hybridSearch, rerankChunks } from "@/lib/rag";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// Vercel serverless: allow up to 60s for RAG + LLM generation
+// Vercel serverless: allow up to 60s for large file processing
 export const maxDuration = 60;
+
+/** Check if an error is a Gemini rate-limit (429) error */
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message.includes("429") || error.message.includes("Too Many Requests");
+  }
+  return false;
+}
+
+/** Extract retry delay (seconds) from a Gemini 429 error message */
+function getRetryDelay(error: unknown): number {
+  if (error instanceof Error) {
+    const match = error.message.match(/retry\s*in\s*([\d.]+)/i);
+    if (match) return Math.ceil(parseFloat(match[1]));
+  }
+  return 10; // default 10s
+}
+
+/** Sleep for a given number of milliseconds */
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export const POST = auth(async function POST(request) {
   try {
@@ -59,10 +81,22 @@ export const POST = auth(async function POST(request) {
     }
 
     // Hybrid Search: BM25 + Vector with RRF fusion
-    const queryEmbedding = await getEmbedding(message);
+    let queryEmbedding: number[];
+    try {
+      queryEmbedding = await getEmbedding(message);
+    } catch (embErr) {
+      if (isRateLimitError(embErr)) {
+        const delay = getRetryDelay(embErr);
+        await sleep(Math.min(delay, 15) * 1000);
+        queryEmbedding = await getEmbedding(message);
+      } else {
+        throw embErr;
+      }
+    }
+
     const hybridResults = hybridSearch(queryEmbedding, message, doc.chunks, 10);
 
-    // Rerank with LLM for higher precision
+    // Rerank with LLM for higher precision (has its own fallback)
     const relevantChunks = await rerankChunks(message, hybridResults, 5);
 
     // Check if document is single-page (no meaningful page distinctions)
@@ -108,9 +142,21 @@ Provide a clear, accurate answer based on the document excerpts above. ${citatio
     conversation.messages.push({ role: "user", content: message });
     await conversation.save();
 
-    // Stream response from Gemini
+    // Stream response from Gemini with rate-limit retry
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContentStream(systemPrompt);
+
+    let result;
+    try {
+      result = await model.generateContentStream(systemPrompt);
+    } catch (genErr) {
+      if (isRateLimitError(genErr)) {
+        const delay = getRetryDelay(genErr);
+        await sleep(Math.min(delay, 15) * 1000);
+        result = await model.generateContentStream(systemPrompt);
+      } else {
+        throw genErr;
+      }
+    }
 
     const sources = relevantChunks.map((c) => ({
       text: c.text.slice(0, 200) + (c.text.length > 200 ? "..." : ""),
@@ -179,6 +225,18 @@ Provide a clear, accurate answer based on the document excerpts above. ${citatio
     });
   } catch (error: unknown) {
     console.error("Chat error:", error);
+
+    // Friendly error message for rate limits
+    if (isRateLimitError(error)) {
+      const delay = getRetryDelay(error);
+      return new Response(
+        JSON.stringify({
+          error: `API rate limit reached. Please wait ${delay} seconds and try again.`,
+        }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const message =
       error instanceof Error ? error.message : "Chat failed";
     return new Response(JSON.stringify({ error: message }), {
