@@ -63,11 +63,13 @@ describe("parseTxt", () => {
     expect(result.pageCount).toBeGreaterThanOrEqual(1);
   });
 
-  it("should estimate page count based on text length", async () => {
-    const longText = "x".repeat(9000); // ~3 pages
+  it("should report a single page regardless of text length", async () => {
+    // A .txt file has no pages, so we never estimate one from the length —
+    // an invented page number would make a chunk's citation point nowhere.
+    const longText = "x".repeat(9000);
     const buffer = Buffer.from(longText, "utf-8");
     const result = await parseTxt(buffer);
-    expect(result.pageCount).toBe(3);
+    expect(result.pageCount).toBe(1);
   });
 
   it("should handle empty text", async () => {
